@@ -23,16 +23,16 @@ ul.task-list li input[type="checkbox"] {
 </style>
 
 
-<script src="dashboard_files/libs/clipboard/clipboard.min.js"></script>
-<script src="dashboard_files/libs/quarto-html/quarto.js"></script>
-<script src="dashboard_files/libs/quarto-html/popper.min.js"></script>
-<script src="dashboard_files/libs/quarto-html/tippy.umd.min.js"></script>
-<script src="dashboard_files/libs/quarto-html/anchor.min.js"></script>
-<link href="dashboard_files/libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="dashboard_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="dashboard_files/libs/bootstrap/bootstrap.min.js"></script>
-<link href="dashboard_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="dashboard_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="dashboard2_files/libs/clipboard/clipboard.min.js"></script>
+<script src="dashboard2_files/libs/quarto-html/quarto.js"></script>
+<script src="dashboard2_files/libs/quarto-html/popper.min.js"></script>
+<script src="dashboard2_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="dashboard2_files/libs/quarto-html/anchor.min.js"></script>
+<link href="dashboard2_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="dashboard2_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="dashboard2_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="dashboard2_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="dashboard2_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 
 
 </head>
@@ -92,10 +92,22 @@ ul.task-list li input[type="checkbox"] {
     background-color: #e0e0e0;
   }
   
+  /* Style for date toggle buttons */
+  #dateButtons button {
+    margin-right: 5px;
+  }
+  
+  /* Active state for date buttons */
+  #dateButtons button.active {
+    background-color: #4285f4;
+    color: white;
+    border-color: #4285f4;
+  }
+  
   /* Fixed container for the image */
   #imageContainer {
-    width: 600px;
-    height: 400px;
+    width: 800px;
+    height: 600px;
     overflow: hidden;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -118,8 +130,14 @@ ul.task-list li input[type="checkbox"] {
     transition: none;
   }
 </style>
-<!-- Dropdown for selecting the image pair -->
-<p><label for="imageSelect">Choose an image set:</label> <select id="imageSelect"> <!-- Options will be populated dynamically --> </select></p>
+<!-- Main dropdown: Select a UUID -->
+<p><label for="imageSelect">Choose a UUID:</label> <select id="imageSelect"> <!-- Options will be populated dynamically from imagePairs keys --> </select></p>
+<p><br></p>
+<!-- Date toggle buttons container -->
+<label>Choose a date:</label>
+<div id="dateButtons">
+<p><!-- Date buttons will be populated dynamically --></p>
+</div>
 <p><br></p>
 <!-- Buttons for toggling images, random selection, zoom controls, and pan reset -->
 <button id="toggleBtn">
@@ -143,19 +161,48 @@ Reset Pan
 <p><img id="toggleImage" src="" alt="Image Toggle"></p>
 </div>
 <script>
-  // ---------------------------
-  // Populate dropdown using keys from imagePairs
-  // ---------------------------
-  const imageSelect = document.getElementById("imageSelect");
-  for (const key in imagePairs) {
-    const option = document.createElement("option");
-    option.value = key;
-    option.textContent = key;
-    imageSelect.appendChild(option);
-  }
 
   // ---------------------------
-  // DOM element references
+  // Populate the main dropdown with UUIDs (keys of imagePairs)
+  // ---------------------------
+  const imageSelect = document.getElementById("imageSelect");
+  for (const uuid in imagePairs) {
+    const option = document.createElement("option");
+    option.value = uuid;
+    option.textContent = uuid;
+    imageSelect.appendChild(option);
+  }
+  
+  // Reference to the date buttons container
+  const dateButtonsContainer = document.getElementById("dateButtons");
+  
+  // Function to update the date buttons based on selected UUID
+  function updateDateButtons(resetPanOnFirst = false) {
+      const uuid = imageSelect.value;
+      dateButtonsContainer.innerHTML = ""; // Clear previous buttons
+      const dates = Object.keys(imagePairs[uuid].dates).sort();
+      dates.forEach(date => {
+        const btn = document.createElement("button");
+        btn.textContent = date;
+        btn.dataset.date = date;
+        btn.addEventListener("click", function() {
+          // Remove active class from all buttons
+          Array.from(dateButtonsContainer.children).forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          // For date toggling, do not reset pan/zoom.
+          updateImagePairForDate(date, false);
+        });
+        dateButtonsContainer.appendChild(btn);
+      });
+      // Automatically activate the first date button if available.
+      if (dates.length > 0) {
+        dateButtonsContainer.children[0].classList.add("active");
+        updateImagePairForDate(dates[0], resetPanOnFirst);
+      }
+    }
+  
+  // ---------------------------
+  // DOM element references for image and buttons
   // ---------------------------
   const imageElement = document.getElementById("toggleImage");
   const toggleButton = document.getElementById("toggleBtn");
@@ -164,78 +211,99 @@ Reset Pan
   const zoomOutBtn = document.getElementById("zoomOutBtn");
   const resetPanBtn = document.getElementById("resetPanBtn");
   const container = document.getElementById("imageContainer");
-
+  
   // ---------------------------
-  // State variables for zoom & pan
+  // State variables for zoom & pan and current image pair
   // ---------------------------
-  let currentPair = imagePairs[imageSelect.value];
+  let currentPair = null;
   let showingA = true;
   let scale = 1;       // Current scale (set by fitting image to container)
   let offsetX = 0;     // Pan offset in pixels
   let offsetY = 0;
-
+  let minScale = 1; // This will be set when the image is first fitted.
+  
   // ---------------------------
   // Update transform based on scale and pan offsets
   // ---------------------------
   function updateTransform() {
     imageElement.style.transform = "translate(" + offsetX + "px, " + offsetY + "px) scale(" + scale + ")";
   }
-
+  
   // ---------------------------
   // Fit the image into the container initially
+  // (This function is used when switching UUIDs only.)
   // ---------------------------
   function fitImageToContainer() {
-    const containerRect = container.getBoundingClientRect();
-    const containerWidth = containerRect.width;
-    const containerHeight = containerRect.height;
-    const imgNaturalWidth = imageElement.naturalWidth;
-    const imgNaturalHeight = imageElement.naturalHeight;
-    
-    // Compute the base scale to fit the image
-    const baseScale = Math.min(containerWidth / imgNaturalWidth, containerHeight / imgNaturalHeight);
-    scale = baseScale;
-    // Center the image
-    offsetX = (containerWidth - imgNaturalWidth * scale) / 2;
-    offsetY = (containerHeight - imgNaturalHeight * scale) / 2;
-    updateTransform();
-  }
-
+      const containerRect = container.getBoundingClientRect();
+      const containerWidth = containerRect.width;
+      const containerHeight = containerRect.height;
+      const imgNaturalWidth = imageElement.naturalWidth;
+      const imgNaturalHeight = imageElement.naturalHeight;
+      
+      // Compute the base scale to fit the image.
+      const baseScale = Math.min(containerWidth / imgNaturalWidth, containerHeight / imgNaturalHeight);
+      scale = baseScale;
+      minScale = baseScale; // Set the minimum allowed scale.
+      
+      // Center the image.
+      offsetX = (containerWidth - imgNaturalWidth * scale) / 2;
+      offsetY = (containerHeight - imgNaturalHeight * scale) / 2;
+      updateTransform();
+    }
+  
   // ---------------------------
-  // Update image pair from dropdown (reset zoom/pan)
+  // Update image pair for a given date WITHOUT resetting zoom/pan.
   // ---------------------------
-  function updateImagePair() {
-    currentPair = imagePairs[imageSelect.value];
-    showingA = true;
-    imageElement.src = currentPair.a;
-    imageElement.onload = fitImageToContainer;
-  }
-
+  // Update image pair for a given date, optionally resetting zoom/pan
+    function updateImagePairForDate(date, resetPan = false) {
+      const uuid = imageSelect.value;
+      currentPair = imagePairs[uuid].dates[date];
+      showingA = true;
+      if (resetPan) {
+        // Wait for the new image to load before fitting it into the container.
+        imageElement.onload = function() {
+          fitImageToContainer();
+          imageElement.onload = null; // Remove the onload handler after using it.
+        };
+      }
+      imageElement.src = currentPair.a;
+    }
+  
+  // ---------------------------
+  // When the UUID changes, update the date buttons and reset zoom/pan.
+  // (Here, we refit the image so that a new UUID resets the state.)
+  // ---------------------------
+      // When the UUID changes, update date buttons and reset pan/zoom.
+    imageSelect.addEventListener("change", function() {
+      updateDateButtons(true); // true resets pan/zoom for a new UUID.
+    });
+  
   // ---------------------------
   // Toggle image between 'a' and 'b' without resetting zoom/pan
   // ---------------------------
   function toggleImage() {
-      // Remove the onload event so that the new image doesn't trigger a refit.
-      imageElement.onload = null;
-      if (showingA) {
-        imageElement.src = currentPair.b;
-      } else {
-        imageElement.src = currentPair.a;
-      }
-      showingA = !showingA;
+    imageElement.onload = null; // Prevent resetting zoom/pan
+    if (showingA) {
+      imageElement.src = currentPair.b;
+    } else {
+      imageElement.src = currentPair.a;
     }
-
-  // ---------------------------
-  // Random selection from dropdown
-  // ---------------------------
-  function chooseRandom() {
-    const options = imageSelect.options;
-    const randomIndex = Math.floor(Math.random() * options.length);
-    imageSelect.selectedIndex = randomIndex;
-    updateImagePair();
+    showingA = !showingA;
   }
-
+  
   // ---------------------------
-  // Zoom functions for buttons (use container center as pivot)
+  // Random selection: pick a random UUID and select the first date button.
+  // ---------------------------
+    function chooseRandom() {
+      const uuids = Object.keys(imagePairs);
+      const randomIndex = Math.floor(Math.random() * uuids.length);
+      const randomUUID = uuids[randomIndex];
+      imageSelect.value = randomUUID;
+      updateDateButtons(true); // Reset pan/zoom for a new UUID.
+    }
+  
+  // ---------------------------
+  // Zoom functions for buttons (using container center as pivot)
   // ---------------------------
   function zoomInButton() {
     const containerRect = container.getBoundingClientRect();
@@ -243,38 +311,43 @@ Reset Pan
     const centerY = containerRect.height / 2;
     const factor = 1.05;
     const newScale = scale * factor;
-    offsetX = centerX - ((centerX - offsetX) * newScale/scale);
-    offsetY = centerY - ((centerY - offsetY) * newScale/scale);
+    offsetX = centerX - ((centerX - offsetX) * newScale / scale);
+    offsetY = centerY - ((centerY - offsetY) * newScale / scale);
     scale = newScale;
     updateTransform();
   }
-
+  
   function zoomOutButton() {
-    const containerRect = container.getBoundingClientRect();
-    const centerX = containerRect.width / 2;
-    const centerY = containerRect.height / 2;
-    const factor = 1.05;
-    const newScale = scale / factor;
-    offsetX = centerX - ((centerX - offsetX) * newScale/scale);
-    offsetY = centerY - ((centerY - offsetY) * newScale/scale);
-    scale = newScale;
-    updateTransform();
-  }
+      const containerRect = container.getBoundingClientRect();
+      const centerX = containerRect.width / 2;
+      const centerY = containerRect.height / 2;
+      const factor = 1.05;
+      let newScale = scale / factor;
+      // Clamp the scale so it never goes below minScale.
+      if (newScale < minScale) {
+        newScale = minScale;
+      }
+      offsetX = centerX - ((centerX - offsetX) * newScale / scale);
+      offsetY = centerY - ((centerY - offsetY) * newScale / scale);
+      scale = newScale;
+      updateTransform();
+    }
 
+  
   // ---------------------------
-  // Reset pan (and optionally refit image)
+  // Reset pan (and refit image) -- used when UUID changes.
   // ---------------------------
   function resetPan() {
     fitImageToContainer();
   }
-
+  
   // ---------------------------
   // Panning via mouse dragging
   // ---------------------------
   let isPanning = false;
   let startX, startY;
   let startOffsetX, startOffsetY;
-
+  
   imageElement.addEventListener("mousedown", function(e) {
     isPanning = true;
     imageElement.classList.add("dragging");
@@ -284,7 +357,7 @@ Reset Pan
     startOffsetY = offsetY;
     e.preventDefault();
   });
-
+  
   document.addEventListener("mousemove", function(e) {
     if (!isPanning) return;
     const dx = e.clientX - startX;
@@ -293,44 +366,45 @@ Reset Pan
     offsetY = startOffsetY + dy;
     updateTransform();
   });
-
+  
   document.addEventListener("mouseup", function() {
     if (isPanning) {
       isPanning = false;
       imageElement.classList.remove("dragging");
     }
   });
-
+  
   // ---------------------------
   // Zooming with the scroll wheel (centered on mouse pointer)
   // ---------------------------
   container.addEventListener("wheel", function(e) {
-    e.preventDefault();
-    const containerRect = container.getBoundingClientRect();
-    // Mouse position relative to container
-    const mouseX = e.clientX - containerRect.left;
-    const mouseY = e.clientY - containerRect.top;
-    const factor = e.deltaY < 0 ? 1.05 : 1/1.05;
-    const newScale = scale * factor;
-    // Adjust offsets so the point under the mouse stays fixed:
-    offsetX = mouseX - ((mouseX - offsetX) * newScale/scale);
-    offsetY = mouseY - ((mouseY - offsetY) * newScale/scale);
-    scale = newScale;
-    updateTransform();
-  });
-
+      e.preventDefault();
+      const containerRect = container.getBoundingClientRect();
+      const mouseX = e.clientX - containerRect.left;
+      const mouseY = e.clientY - containerRect.top;
+      const factor = e.deltaY < 0 ? 1.05 : 1 / 1.05;
+      let newScale = scale * factor;
+      // When zooming out, prevent scale from going below minScale.
+      if (newScale < minScale) {
+        newScale = minScale;
+      }
+      offsetX = mouseX - ((mouseX - offsetX) * newScale / scale);
+      offsetY = mouseY - ((mouseY - offsetY) * newScale / scale);
+      scale = newScale;
+      updateTransform();
+    });
+  
   // ---------------------------
-  // Attach event listeners for buttons and dropdown.
+  // Attach event listeners for buttons.
   // ---------------------------
   toggleButton.addEventListener("click", toggleImage);
-  imageSelect.addEventListener("change", updateImagePair);
   randomButton.addEventListener("click", chooseRandom);
   zoomInBtn.addEventListener("click", zoomInButton);
   zoomOutBtn.addEventListener("click", zoomOutButton);
   resetPanBtn.addEventListener("click", resetPan);
-
-  // Initialize with the first image pair.
-  updateImagePair();
+  
+  // Initialize: update date buttons and load the initial image.
+  updateDateButtons();
 </script>
 
 </main>
