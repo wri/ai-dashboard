@@ -1,0 +1,154 @@
+---
+title: "MRV dashboard for Birdlife International"
+format: html
+execute:
+  echo: false
+---
+
+
+
+```{python, results:'asis', echo: false}
+import os
+import json
+import sys
+
+
+# Define the two folders
+images_folder = "images"
+basemap_folder = "basemap"
+
+# List .png files in both directories (adjust the extension if needed)
+images_files = sorted([f for f in os.listdir(images_folder) if f.lower().endswith('.png')])
+basemap_files = sorted([f for f in os.listdir(basemap_folder) if f.lower().endswith('.png')])
+
+# Create dictionaries with the base filename (without extension) as the key
+images_base = {os.path.splitext(f)[0]: f for f in images_files}
+basemap_base = {os.path.splitext(f)[0]: f for f in basemap_files}
+
+# Determine common bases between the two folders
+common_bases = set(images_base.keys()).intersection(basemap_base.keys())
+
+# Build a dictionary of pairs where the key is the base filename
+pairs = {}
+for base in common_bases:
+    pairs[base] = {
+        "a": os.path.join(images_folder, images_base[base]),
+        "b": os.path.join(basemap_folder, basemap_base[base])
+    }
+
+# Create a JavaScript variable assignment from the dictionary
+js_variable = "const imagePairs = " + json.dumps(pairs, indent=2) + ";"
+
+# Write out the JavaScript file (this file will be created in the same directory as your document)
+with open("imagePairs.js", "w") as f:
+    f.write(js_variable)
+```
+<!-- Include the generated imagePairs.js -->
+<script src="imagePairs.js"></script>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background-color: #f8f8f8;
+  }
+
+  label {
+    font-weight: bold;
+    margin-right: 10px;
+  }
+
+  select, button {
+    padding: 8px 12px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 10px;
+    background-color: #fff;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: #e0e0e0;
+  }
+
+  #toggleImage {
+    display: block;
+    margin-top: 20px;
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
+  }
+</style>
+
+<!-- Dropdown for selecting the image pair -->
+<label for="imageSelect">Choose an image set:</label>
+<select id="imageSelect">
+  <!-- Options will be populated dynamically -->
+</select>
+
+<br><br>
+
+<!-- Buttons to toggle images and choose a random pair -->
+<button id="toggleBtn">Toggle Image</button>
+<button id="randomBtn">Random</button>
+
+<br><br>
+
+<img id="toggleImage" src="" alt="Image Toggle">
+
+<script>
+  // Populate the dropdown using keys from imagePairs
+  const imageSelect = document.getElementById("imageSelect");
+  for (const key in imagePairs) {
+    const option = document.createElement("option");
+    option.value = key;
+    option.textContent = key;
+    imageSelect.appendChild(option);
+  }
+
+  // Get references to DOM elements
+  const imageElement = document.getElementById("toggleImage");
+  const toggleButton = document.getElementById("toggleBtn");
+  const randomButton = document.getElementById("randomBtn");
+
+  // Set up the initial image pair from the first option
+  let currentPair = imagePairs[imageSelect.value];
+  let showingA = true;
+  imageElement.src = currentPair.a;
+
+  // Function to toggle the image source between 'a' and 'b'
+  function toggleImage() {
+    if (showingA) {
+      imageElement.src = currentPair.b;
+    } else {
+      imageElement.src = currentPair.a;
+    }
+    showingA = !showingA;
+  }
+
+  // Function to update the image pair when a new option is selected
+  function updateImagePair() {
+    currentPair = imagePairs[imageSelect.value];
+    showingA = true;
+    imageElement.src = currentPair.a;
+  }
+
+  // Function to choose a random option from the dropdown
+  function chooseRandom() {
+    const options = imageSelect.options;
+    const randomIndex = Math.floor(Math.random() * options.length);
+    imageSelect.selectedIndex = randomIndex;
+    updateImagePair();
+  }
+
+  // Attach event listeners
+  toggleButton.addEventListener("click", toggleImage);
+  imageSelect.addEventListener("change", updateImagePair);
+  randomButton.addEventListener("click", chooseRandom);
+</script>
