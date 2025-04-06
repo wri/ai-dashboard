@@ -140,7 +140,7 @@ ul.task-list li input[type="checkbox"] {
   
   /* Image container styling */
   #imageContainer {
-    width: 100%;
+    width: 120%;
     height: 600px;
     overflow: hidden;
     border: 1px solid #ddd;
@@ -192,13 +192,16 @@ ul.task-list li input[type="checkbox"] {
     <div class="buttonRow">
       <button id="zoomInBtn">Zoom In</button>
       <button id="zoomOutBtn">Zoom Out</button>
+      <button id="resetPanBtn">Reset Img</button>
     </div>
     
-    <!-- Random and Reset buttons side by side -->
+    <!-- Previous, Next, and Reset buttons side by side -->
     <div class="buttonRow">
-      <button id="randomBtn">Random</button>
-      <button id="resetPanBtn">Reset Image</button>
+      <button id="prevSiteBtn">Previous Site</button>
+      <button id="nextSiteBtn">Next Site</button>
+      
     </div>
+
   </div>
   
   <div id="rightPanel">
@@ -386,7 +389,7 @@ ul.task-list li input[type="checkbox"] {
     const containerRect = container.getBoundingClientRect();
     const centerX = containerRect.width / 2;
     const centerY = containerRect.height / 2;
-    const factor = 1.05;
+    const factor = 1.1;
     const newScale = scale * factor;
     offsetX = centerX - ((centerX - offsetX) * newScale / scale);
     offsetY = centerY - ((centerY - offsetY) * newScale / scale);
@@ -398,7 +401,7 @@ ul.task-list li input[type="checkbox"] {
     const containerRect = container.getBoundingClientRect();
     const centerX = containerRect.width / 2;
     const centerY = containerRect.height / 2;
-    const factor = 1.05;
+    const factor = 1.1;
     let newScale = scale / factor;
     // Clamp the scale so it never goes below minScale.
     if (newScale < minScale) {
@@ -473,10 +476,31 @@ ul.task-list li input[type="checkbox"] {
   // Attach event listeners for buttons.
   // ---------------------------
   toggleButton.addEventListener("click", toggleImage);
-  randomButton.addEventListener("click", chooseRandom);
+  // randomButton.addEventListener("click", chooseRandom);
   zoomInBtn.addEventListener("click", zoomInButton);
   zoomOutBtn.addEventListener("click", zoomOutButton);
   resetPanBtn.addEventListener("click", resetPan);
+
+  const prevSiteBtn = document.getElementById("prevSiteBtn");
+    const nextSiteBtn = document.getElementById("nextSiteBtn");
+
+    // Event listener for Previous Site button.
+    prevSiteBtn.addEventListener("click", function() {
+      // If not at the first site, select the previous option.
+      if (imageSelect.selectedIndex > 0) {
+        imageSelect.selectedIndex--;
+        updateDateButtons(true);
+      }
+    });
+
+    // Event listener for Next Site button.
+    nextSiteBtn.addEventListener("click", function() {
+      // If not at the last site, select the next option.
+      if (imageSelect.selectedIndex < imageSelect.options.length - 1) {
+        imageSelect.selectedIndex++;
+        updateDateButtons(true);
+      }
+    });
   
   // ---------------------------
   // Initialize: populate site dropdown and update date buttons.
