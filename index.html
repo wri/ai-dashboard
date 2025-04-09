@@ -299,6 +299,45 @@ ul.task-list li input[type="checkbox"] {
       imageSelect.appendChild(option);
     }
   }
+
+  // ----------------------
+  // UPDATE THE TREE TABLE
+  // ----------------------
+  function updateTreesTable() {
+    const selectedProject = projectSelect.value;
+    const uuid = imageSelect.value;
+    const tableBody = document.querySelector("#treesTable tbody");
+    // Clear any previous rows
+    tableBody.innerHTML = "";
+    
+    // Check that data exists for the selected project and site.
+    if (projectsData[selectedProject] && projectsData[selectedProject][uuid]) {
+      // Get dates (sorted)
+      const dates = Object.keys(projectsData[selectedProject][uuid].dates).sort();
+      
+      // For each date, create a new row with two cells.
+      dates.forEach(date => {
+        const tr = document.createElement("tr");
+
+        // Date Cell
+        const tdDate = document.createElement("td");
+        tdDate.textContent = date;
+        tdDate.style.border = "1px solid #ccc";
+        tdDate.style.padding = "5px";
+        
+        // Value Cell (to be populated later from modified file name)
+        const tdValue = document.createElement("td");
+        tdValue.textContent = ""; // leave empty for now (or use a placeholder, e.g., '—')
+        tdValue.style.border = "1px solid #ccc";
+        tdValue.style.padding = "5px";
+        
+        tr.appendChild(tdDate);
+        tr.appendChild(tdValue);
+        tableBody.appendChild(tr);
+      });
+    }
+  }
+
   
   // ---------------------------
   // Update the date buttons based on the selected site (UUID) within the selected project.
@@ -330,6 +369,7 @@ ul.task-list li input[type="checkbox"] {
       dateButtonsContainer.children[0].classList.add("active");
       updateImagePairForDate(dates[0], resetPanOnFirst);
     }
+    updateTreesTable();
   }
   
   // ---------------------------
