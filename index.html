@@ -163,6 +163,34 @@ ul.task-list li input[type="checkbox"] {
     cursor: grabbing;
     transition: none;
   }
+
+  /* Tree Count Overview Table Style */
+  #treesTable {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  #treesTable th,
+  #treesTable td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+
+  #treesTable th {
+    background-color: #f8f8f8;
+    font-weight: bold;
+  }
+
+  #treesTable tfoot td {
+    font-weight: bold;
+    background-color: #f8f8f8;
+  }
 </style>
 
 <div id="dashboardLayout">
@@ -201,6 +229,27 @@ ul.task-list li input[type="checkbox"] {
       <button id="nextSiteBtn">Next Site</button>
       
     </div>
+
+    <!-- Tree Count Overview Table -->
+  <label>Tree Count Overview</label>
+  
+<table id="treesTable" class="caption-top" data-quarto-postprocess="true" style="width: 100%; margin-top: 10px; border-collapse: collapse;">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th" style="border: 1px solid #ccc; padding: 5px">Image Date</th>
+<th data-quarto-table-cell-role="th" style="border: 1px solid #ccc; padding: 5px">Number of Trees</th>
+</tr>
+</thead>
+<tbody>
+</tbody><tfoot>
+<tr class="odd">
+<td style="border: 1px solid #ccc; padding: 5px; font-weight: bold">Total change</td>
+<td style="border: 1px solid #ccc; padding: 5px; font-weight: bold">+ X trees</td>
+</tr>
+</tfoot>
+
+</table>
+
 
   </div>
   
