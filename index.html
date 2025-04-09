@@ -303,31 +303,53 @@ ul.task-list li input[type="checkbox"] {
   // ----------------------
   // UPDATE THE TREE TABLE
   // ----------------------
+  // Helper function to extract the tree count from the file name.
+  function extractTreeCount(filePath) {
+    // Get just the file name from the full path.
+    const fileName = filePath.split('/').pop();
+    // Remove the extension.
+    const baseName = fileName.replace('.png', '');
+    // Split the base name by underscore.
+    const parts = baseName.split('_');
+    // If there are four parts, the fourth part contains the tree count.
+    if (parts.length === 4) {
+      return parts[3];
+    }
+    return "";
+  }
+
   function updateTreesTable() {
     const selectedProject = projectSelect.value;
     const uuid = imageSelect.value;
     const tableBody = document.querySelector("#treesTable tbody");
-    // Clear any previous rows
+    // Clear any previous rows.
     tableBody.innerHTML = "";
     
     // Check that data exists for the selected project and site.
     if (projectsData[selectedProject] && projectsData[selectedProject][uuid]) {
-      // Get dates (sorted)
+      // Get dates (sorted).
       const dates = Object.keys(projectsData[selectedProject][uuid].dates).sort();
       
-      // For each date, create a new row with two cells.
+      // Loop through each date and populate a table row.
       dates.forEach(date => {
         const tr = document.createElement("tr");
 
-        // Date Cell
+        // Create the "Image Date" cell.
         const tdDate = document.createElement("td");
         tdDate.textContent = date;
         tdDate.style.border = "1px solid #ccc";
         tdDate.style.padding = "5px";
         
-        // Value Cell (to be populated later from modified file name)
+        // Extract the tree count from the file name in the 'a' image.
+        const pair = projectsData[selectedProject][uuid].dates[date];
+        let treeCount = "";
+        if (pair && pair.a) {
+          treeCount = extractTreeCount(pair.a);
+        }
+        
+        // Create the "Number of Trees" cell.
         const tdValue = document.createElement("td");
-        tdValue.textContent = ""; // leave empty for now (or use a placeholder, e.g., '—')
+        tdValue.textContent = treeCount; // Shows the value if found, or remains empty.
         tdValue.style.border = "1px solid #ccc";
         tdValue.style.padding = "5px";
         
