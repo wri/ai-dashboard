@@ -191,6 +191,53 @@ ul.task-list li input[type="checkbox"] {
     font-weight: bold;
     background-color: #f8f8f8;
   }
+
+
+  /* Legend container styling to display items inline */
+  #legend {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    
+    /* Flex display for one-line layout */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+  }
+
+  /* Each legend item: keep inline-flex settings to align circle and text */
+  .legend-item {
+    display: flex;
+    align-items: center;
+  }
+
+  /* The colored circle for each legend item */
+  .legend-circle {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+
+  /* Blue circle for the baseline */
+  .legend-circle.baseline {
+    background-color: #4285f4;
+  }
+
+  /* Red circle for new trees */
+  .legend-circle.new-trees {
+    background-color: #e53935;
+  }
+
+  /* Legend text styling */
+  .legend-text {
+    font-size: 14px;
+    color: #333;
+  }
 </style>
 
 <div id="dashboardLayout">
@@ -230,6 +277,18 @@ ul.task-list li input[type="checkbox"] {
       
     </div>
 
+  <!-- Legend (One Line) -->
+  <div id="legend">
+    <div class="legend-item">
+      <span class="legend-circle baseline"></span>
+      <span class="legend-text">Baseline</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-circle new-trees"></span>
+      <span class="legend-text">New trees</span>
+    </div>
+  </div>
+
     <!-- Tree Count Overview Table -->
   <label>Tree Count Overview</label>
   
@@ -243,8 +302,8 @@ ul.task-list li input[type="checkbox"] {
 <tbody>
 </tbody><tfoot>
 <tr class="odd">
-<td style="border: 1px solid #ccc; padding: 5px; font-weight: bold">Total change</td>
-<td style="border: 1px solid #ccc; padding: 5px; font-weight: bold">+ X trees</td>
+<td style="border: 1px solid #ccc; padding: 5px; font-weight: bold">Trees Grown</td>
+<td style="border: 1px solid #ccc; padding: 5px; font-weight: bold">+ $TREES_GROWN trees</td>
 </tr>
 </tfoot>
 
@@ -325,6 +384,9 @@ ul.task-list li input[type="checkbox"] {
     // Clear any previous rows.
     tableBody.innerHTML = "";
     
+    // This array will store valid numeric tree counts.
+    let validCounts = [];
+    
     // Check that data exists for the selected project and site.
     if (projectsData[selectedProject] && projectsData[selectedProject][uuid]) {
       // Get dates (sorted).
@@ -347,9 +409,15 @@ ul.task-list li input[type="checkbox"] {
           treeCount = extractTreeCount(pair.a);
         }
         
+        // Convert the tree count to a number, if possible.
+        let numericCount = parseInt(treeCount);
+        if (!isNaN(numericCount)) {
+          validCounts.push(numericCount);
+        }
+        
         // Create the "Number of Trees" cell.
         const tdValue = document.createElement("td");
-        tdValue.textContent = treeCount; // Shows the value if found, or remains empty.
+        tdValue.textContent = treeCount; // Displays the value if found, or remains empty.
         tdValue.style.border = "1px solid #ccc";
         tdValue.style.padding = "5px";
         
@@ -358,6 +426,16 @@ ul.task-list li input[type="checkbox"] {
         tableBody.appendChild(tr);
       });
     }
+    
+    // Compute Trees Grown as the difference between the last and first valid counts.
+    let treesGrown = "";
+    if (validCounts.length > 0) {
+      treesGrown = validCounts[validCounts.length - 1] - validCounts[0];
+    }
+    
+    // Update the footer cell with the treesGrown value.
+    const footerCell = document.querySelector("#treesTable tfoot td:last-child");
+    footerCell.textContent = `+ ${treesGrown} trees`;
   }
 
   
